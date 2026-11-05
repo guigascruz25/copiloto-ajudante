@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Ajudante do Copiloto</title>
+  <style>
+:root {
+  --bg: #0e1016;
+  --panel: #171a22;
+  --line: rgba(255, 255, 255, 0.09);
+  --text: #eef0f4;
+  --muted: #8b93a3;
+  --accent: #5b8cff;
+  --ok: #2fd28f;
+  --warn: #ffd54f;
+  --danger: #ff5d6c;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.45 "Segoe UI Variable Text", "Segoe UI", system-ui, -apple-system, sans-serif; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+h1 { font-size: 20px; margin: 0; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+
+.entrar { max-width: 420px; margin: 0 auto; padding: 48px 16px; display: flex; flex-direction: column; gap: 14px; }
+.entrar form { display: flex; flex-direction: column; gap: 12px; }
+label { display: flex; flex-direction: column; gap: 5px; font-size: 13px; color: var(--muted); }
+input { width: 100%; padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); color: var(--text); font-size: 16px; }
+input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+#in-codigo { text-transform: uppercase; letter-spacing: 3px; font-variant-numeric: tabular-nums; }
+.primary { padding: 11px 16px; border-radius: 10px; border: 0; background: var(--accent); color: #fff; font-weight: 600; }
+.ghost, #btn-voltar { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: none; }
+.erro { margin: 0; color: #ffc2c8; font-size: 13px; }
+
+.sala { max-width: 720px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.topo { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
+.k { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.dot.on { background: var(--ok); box-shadow: 0 0 0 3px rgba(47, 210, 143, 0.2); }
+.dot.off { background: var(--danger); }
+.faixa { margin: 0; padding: 10px 12px; border-radius: 10px; background: rgba(255, 213, 79, 0.12); color: #ffe08a; font-size: 14px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+details.card summary { cursor: pointer; }
+
+.ritmo-row { display: flex; align-items: baseline; gap: 8px; margin-top: 4px; }
+.ritmo-row b { font-size: 26px; font-variant-numeric: tabular-nums; }
+.atraso { margin-left: auto; font-size: 13px; font-weight: 600; color: var(--ok); }
+.atraso.late { color: var(--danger); }
+.barra { height: 5px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; margin: 8px 0 6px; }
+.barra i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .5s; }
+.ritmo.over .barra i { background: var(--danger); }
+.ritmo p { margin: 0; }
+
+.rapidos { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 10px; }
+.rapidos button { padding: 8px 11px; border-radius: 99px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.04); font-size: 14px; }
+.rapidos button:hover, .itens button:hover { border-color: var(--warn); color: var(--warn); }
+.linha { display: flex; gap: 8px; }
+.linha input { flex: 1; min-width: 0; }
+.enviados { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.enviados li { display: flex; gap: 8px; font-size: 13.5px; color: var(--muted); }
+.enviados li span:first-child { flex: 1; color: var(--text); }
+.enviados .visto { color: var(--ok); }
+.enviados .falhou { color: var(--danger); }
+
+.itens { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.itens li { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.03); }
+.itens li span { flex: 1; }
+.itens li small { display: block; color: var(--muted); font-size: 12px; }
+.itens li.ok { opacity: .55; }
+.itens li.ok > span:first-child::before { content: "✓ "; color: var(--ok); }
+.itens button { flex: none; padding: 6px 10px; border-radius: 8px; border: 1px solid var(--line); background: none; font-size: 13px; white-space: nowrap; }
+.itens .feito { color: var(--muted); font-size: 13px; }
+.atras-k { margin-top: 14px; color: #ffb547; }
+.vazio { color: var(--muted); font-size: 14px; }
+
+.roteiro { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
+.roteiro .now { color: var(--accent); font-weight: 600; }
+.roteiro .done { color: var(--muted); }
+</style>
+</head>
+<body>
+  <main id="entrar" class="entrar">
+    <h1>Ajudante do Copiloto</h1>
+    <p class="muted">Acompanhe a apresentação e mande avisos que aparecem na tela de quem está falando. Só essa pessoa vê.</p>
+    <form id="form-entrar">
+      <label>Seu nome <input id="in-nome" maxlength="40" autocomplete="name" required placeholder="Ex.: Ana" /></label>
+      <label>Código da sala <input id="in-codigo" maxlength="6" autocomplete="off" required placeholder="Ex.: K7M2QX" /></label>
+      <p id="entrar-erro" class="erro" hidden></p>
+      <button class="primary">Entrar na sala</button>
+    </form>
+  </main>
+
+  <main id="sala" class="sala" hidden>
+    <header class="topo">
+      <div>
+        <div class="k">Acompanhando <span id="st-dot" class="dot"></span><span id="st-txt" class="muted"></span></div>
+        <h1 id="quem">—</h1>
+      </div>
+      <button id="btn-sair" class="ghost" title="Sair da sala">Sair</button>
+    </header>
+
+    <p id="aguardando" class="faixa" hidden></p>
+
+    <section id="ritmo" class="card ritmo" hidden>
+      <div class="k">Bloco <span id="r-idx"></span> · <b id="r-nome"></b></div>
+      <div class="ritmo-row"><b id="r-tempo">00:00</b><span class="muted">de <span id="r-plano"></span></span><span id="r-atraso" class="atraso"></span></div>
+      <div class="barra"><i id="r-barra"></i></div>
+      <p id="r-total" class="muted small"></p>
+    </section>
+
+    <section class="card enviar">
+      <div class="k">Mandar aviso</div>
+      <div id="rapidos" class="rapidos"></div>
+      <form id="form-aviso" class="linha">
+        <input id="in-aviso" maxlength="300" autocomplete="off" placeholder="Escreva o aviso e aperte Enter" />
+        <button class="primary">Enviar</button>
+      </form>
+      <ul id="enviados" class="enviados"></ul>
+    </section>
+
+    <section class="card">
+      <div class="k"><span id="lista-k">Falta falar</span> · <span id="etapa-nome"></span></div>
+      <ul id="itens" class="itens"></ul>
+      <div id="atras-box" hidden>
+        <div class="k atras-k">Ficou para trás</div>
+        <ul id="atras" class="itens"></ul>
+      </div>
+    </section>
+
+    <details class="card">
+      <summary class="k">Roteiro completo</summary>
+      <ol id="roteiro" class="roteiro"></ol>
+    </details>
+  </main>
+
+  <main id="fim" class="entrar" hidden>
+    <h1>A sala foi fechada</h1>
+    <p class="muted">Quem apresenta encerrou a sala. Obrigado por acompanhar.</p>
+    <button id="btn-voltar">Entrar em outra sala</button>
+  </main>
+
+  <script type="module">
+// Sala ao vivo entre quem apresenta e quem acompanha (o "ajudante"), por um
+// canal de broadcast do Supabase Realtime. Nada é gravado no banco: as
+// mensagens só passam pelo canal. Sem dependências, porque este arquivo
+// também vai embutido na página do ajudante (scripts/build-ajudante.js).
+//
+// Mensagens:
+//   apresentador → ajudantes: "estado" (roteiro, bloco, checklist, tempo),
+//                             "recebido" e "visto" {id} de cada aviso, "fim".
+//   ajudante → apresentador:  "oi" {id, nome} (ao entrar e a cada 20 s),
+//                             "aviso" {id, nome, texto}, "tchau" {id}.
+
+const SALA = {
+  // Projeto vendus-aula. A chave publishable é pública por definição (feita
+  // para ficar no navegador); ela só dá acesso aos canais abertos.
+  url: "wss://sjqwavsmhhcwrwucikac.supabase.co/realtime/v1/websocket",
+  chave: "sb_publishable_JBFstoCe2KL07W_Q7ZvOTw_8v1FWvnV",
+  // Endereço da página do ajudante publicada (npm run publish:ajudante). O
+  // convite leva o código no fim do link. Vazio: o convite manda abrir o
+  // arquivo ajudante.html e digitar o código.
+  paginaAjudante: "https://guigascruz25.github.io/copiloto-ajudante/",
+};
+
+// Sem letras e números que se confundem (O/0, I/1/L).
+const ALFABETO = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+
+function novoCodigo(n = 6) {
+  return [...crypto.getRandomValues(new Uint8Array(n))].map((x) => ALFABETO[x % ALFABETO.length]).join("");
+}
+
+const codigoValido = (c) => new RegExp(`^[${ALFABETO}]{6}$`).test(c);
+
+// Conecta na sala e reconecta sozinho se a rede cair. onEvento(evento, dados)
+// recebe o que os outros mandam; onStatus recebe conectando, conectado,
+// reconectando, erro ou fechado.
+function conectarSala({ codigo, onEvento, onStatus = () => {} }) {
+  const topic = `realtime:copiloto-sala-${codigo}`;
+  let ws = null;
+  let ref = 0;
+  let joinRef = "";
+  let pronto = false;
+  let fechado = false;
+  let tentativas = 0;
+  let heartbeat = null;
+  let retry = null;
+  const fila = [];
+
+  const raw = (msg) => ws && ws.readyState === WebSocket.OPEN && ws.send(JSON.stringify(msg));
+
+  function abrir() {
+    onStatus(tentativas ? "reconectando" : "conectando");
+    ws = new WebSocket(`${SALA.url}?apikey=${encodeURIComponent(SALA.chave)}&vsn=1.0.0`);
+    joinRef = String(++ref);
+    ws.onopen = () => {
+      raw({
+        topic,
+        event: "phx_join",
+        payload: { config: { broadcast: { self: false, ack: false }, presence: { enabled: false }, private: false } },
+        ref: joinRef,
+        join_ref: joinRef,
+      });
+      heartbeat = setInterval(() => raw({ topic: "phoenix", event: "heartbeat", payload: {}, ref: String(++ref) }), 25000);
+    };
+    ws.onmessage = (m) => {
+      let msg;
+      try {
+        msg = JSON.parse(m.data);
+      } catch {
+        return;
+      }
+      if (msg.topic !== topic) return;
+      if (msg.event === "phx_reply" && msg.ref === joinRef) {
+        if (msg.payload && msg.payload.status === "ok") {
+          pronto = true;
+          tentativas = 0;
+          onStatus("conectado");
+          fila.splice(0).forEach(([e, p]) => enviar(e, p));
+        } else {
+          onStatus("erro");
+          ws.close();
+        }
+      } else if (msg.event === "broadcast" && msg.payload && msg.payload.event) {
+        onEvento(msg.payload.event, msg.payload.payload || {});
+      } else if (msg.event === "phx_error" || msg.event === "phx_close") {
+        ws.close();
+      }
+    };
+    ws.onerror = () => {};
+    ws.onclose = () => {
+      pronto = false;
+      clearInterval(heartbeat);
+      if (fechado) return;
+      onStatus("reconectando");
+      retry = setTimeout(abrir, Math.min(15000, 1000 * 2 ** tentativas++));
+    };
+  }
+
+  // Sem conexão, guarda as últimas mensagens e manda ao reconectar.
+  function enviar(event, payload) {
+    if (fechado) return;
+    if (!pronto) {
+      fila.push([event, payload]);
+      if (fila.length > 20) fila.shift();
+      return;
+    }
+    raw({ topic, event: "broadcast", payload: { type: "broadcast", event, payload }, ref: String(++ref), join_ref: joinRef });
+  }
+
+  abrir();
+  return {
+    enviar,
+    fechar() {
+      fechado = true;
+      clearTimeout(retry);
+      clearInterval(heartbeat);
+      if (ws) ws.close();
+      onStatus("fechado");
+    },
+  };
+}
+
+// Página de quem acompanha a apresentação: entra na sala com o código, vê o
+// roteiro e o andamento e manda avisos que aparecem no painel de quem fala.
+// Vira um arquivo único em dist/ajudante.html (scripts/build-ajudante.js).
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const guardar = (k, v) => {
+  try {
+    localStorage.setItem(k, v);
+  } catch {}
+};
+const ler = (k) => {
+  try {
+    return localStorage.getItem(k) || "";
+  } catch {
+    return "";
+  }
+};
+
+const RAPIDOS = {
+  aula: ["Fala mais devagar", "Volta para o roteiro", "Tem pergunta no chat", "Olha o tempo", "Seu áudio está ruim", "Slide travado"],
+  venda: ["Pergunta mais e escuta", "Pede o próximo passo", "Não fala o preço ainda", "Isola a objeção", "Seu áudio está ruim"],
+};
+const OI_MS = 20000;
+const SEM_ESTADO_MS = 40000;
+const REENVIO_MS = 4000;
+const TENTATIVAS = 4;
+
+const meuId = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
+let nome = "";
+let sala = null;
+let estado = null;
+let estadoEm = 0; // quando o último estado chegou (relógio local)
+let status = "";
+let oi = null;
+let relogio = null;
+const enviados = []; // { id, texto, situacao: enviando | entregue | visto | falhou, tentativas, timer }
+
+// ---------- entrar ----------
+
+function telaEntrar(erro = "") {
+  $("entrar").hidden = false;
+  $("sala").hidden = $("fim").hidden = true;
+  $("in-nome").value = ler("ajudante-nome");
+  const doLink = location.hash.replace("#", "").toUpperCase();
+  $("in-codigo").value = codigoValido(doLink) ? doLink : ler("ajudante-codigo");
+  $("entrar-erro").hidden = !erro;
+  $("entrar-erro").textContent = erro;
+  ($("in-nome").value ? $("in-codigo") : $("in-nome")).focus();
+}
+
+$("form-entrar").onsubmit = (e) => {
+  e.preventDefault();
+  const n = $("in-nome").value.trim();
+  const c = $("in-codigo").value.trim().toUpperCase().replace(/\s/g, "");
+  if (!codigoValido(c)) return telaEntrar("O código tem 6 letras e números, como aparece no painel de quem apresenta.");
+  guardar("ajudante-nome", n);
+  guardar("ajudante-codigo", c);
+  entrar(n, c);
+};
+
+function entrar(n, c) {
+  nome = n;
+  estado = null;
+  enviados.length = 0;
+  $("entrar").hidden = $("fim").hidden = true;
+  $("sala").hidden = false;
+  $("quem").textContent = `Sala ${c}`;
+  renderEnviados();
+  render();
+  sala = conectarSala({
+    codigo: c,
+    onEvento: receber,
+    onStatus: (s) => {
+      status = s;
+      if (s === "conectado") dizerOi();
+      renderStatus();
+    },
+  });
+  oi = setInterval(dizerOi, OI_MS);
+  relogio = setInterval(() => {
+    renderRitmo();
+    renderStatus();
+  }, 1000);
+}
+
+function sair(paraTela = telaEntrar) {
+  if (sala) {
+    sala.enviar("tchau", { id: meuId });
+    const s = sala;
+    setTimeout(() => s.fechar(), 300);
+  }
+  sala = null;
+  clearInterval(oi);
+  clearInterval(relogio);
+  enviados.forEach((a) => clearTimeout(a.timer));
+  paraTela();
+}
+
+const dizerOi = () => sala && sala.enviar("oi", { id: meuId, nome });
+
+$("btn-sair").onclick = () => sair();
+$("btn-voltar").onclick = () => telaEntrar();
+window.addEventListener("beforeunload", () => sala && sala.enviar("tchau", { id: meuId }));
+
+// ---------- mensagens ----------
+
+function receber(evento, dados) {
+  if (evento === "estado") {
+    estado = dados;
+    estadoEm = Date.now();
+    render();
+  } else if (evento === "recebido" || evento === "visto") {
+    const a = enviados.find((x) => x.id === dados.id);
+    if (!a) return;
+    clearTimeout(a.timer);
+    if (evento === "visto" || a.situacao !== "visto") a.situacao = evento === "visto" ? "visto" : "entregue";
+    renderEnviados();
+  } else if (evento === "fim") {
+    sair(() => {
+      $("entrar").hidden = $("sala").hidden = true;
+      $("fim").hidden = false;
+    });
+  }
+}
+
+// Manda e reenvia até quem apresenta confirmar (ele ignora repetidos).
+function avisar(texto) {
+  texto = String(texto || "").trim().slice(0, 300);
+  if (!texto || !sala) return;
+  const a = { id: `${meuId}-${Date.now().toString(36)}`, texto, situacao: "enviando", tentativas: 0, timer: null };
+  enviados.unshift(a);
+  enviados.splice(10);
+  const tentar = () => {
+    if (a.situacao !== "enviando") return;
+    if (a.tentativas++ >= TENTATIVAS) {
+      a.situacao = "falhou";
+      renderEnviados();
+      return;
+    }
+    sala.enviar("aviso", { id: a.id, autor: meuId, nome, texto });
+    a.timer = setTimeout(tentar, REENVIO_MS);
+  };
+  tentar();
+  renderEnviados();
+}
+
+$("form-aviso").onsubmit = (e) => {
+  e.preventDefault();
+  avisar($("in-aviso").value);
+  $("in-aviso").value = "";
+  $("in-aviso").focus();
+};
+$("rapidos").onclick = (e) => e.target.dataset.texto && avisar(e.target.dataset.texto);
+for (const lista of ["itens", "atras"]) {
+  $(lista).onclick = (e) => {
+    const b = e.target.closest("button[data-texto]");
+    if (!b) return;
+    avisar(`Você não falou: ${b.dataset.texto}`);
+    b.textContent = "Avisado ✓";
+    b.disabled = true;
+  };
+}
+
+// ---------- tela ----------
+
+const fmt = (ms) => {
+  const s = Math.floor(Math.max(0, ms) / 1000);
+  const h = Math.floor(s / 3600);
+  const mm = String(Math.floor((s % 3600) / 60)).padStart(2, "0");
+  const ss = String(s % 60).padStart(2, "0");
+  return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+};
+
+function renderStatus() {
+  const semEstado = status === "conectado" && (!estado || Date.now() - estadoEm > SEM_ESTADO_MS);
+  $("st-dot").className = `dot ${status === "conectado" && !semEstado ? "on" : status === "conectando" ? "" : "off"}`;
+  $("st-txt").textContent =
+    status !== "conectado"
+      ? { conectando: "conectando…", reconectando: "sem conexão, tentando de novo…", erro: "erro ao entrar" }[status] || ""
+      : semEstado
+        ? estado ? "quem apresenta está sem conexão" : "esperando quem apresenta"
+        : "ao vivo";
+  const aguardando = $("aguardando");
+  if (status === "conectado" && !estado) {
+    aguardando.hidden = false;
+    aguardando.textContent = "Você entrou na sala. Assim que o painel de quem apresenta estiver aberto, o roteiro aparece aqui.";
+  } else if (estado && !estado.emCall) {
+    aguardando.hidden = false;
+    aguardando.textContent = `${estado.tipo === "aula" ? "A aula" : "A call"} ainda não começou (ou já terminou). Os avisos já chegam no painel.`;
+  } else aguardando.hidden = true;
+}
+
+function render() {
+  renderStatus();
+  renderRapidos();
+  if (!estado) {
+    $("ritmo").hidden = true;
+    $("itens").innerHTML = `<li class="vazio">O roteiro aparece quando quem apresenta abrir o painel.</li>`;
+    $("atras-box").hidden = true;
+    $("roteiro").innerHTML = "";
+    return;
+  }
+  $("quem").textContent = `${estado.apresentador} · ${estado.projeto}`;
+  document.title = `Ajudante · ${estado.apresentador}`;
+  const idx = Math.max(0, estado.etapas.findIndex((e) => e.id === estado.etapa));
+  const etapa = estado.etapas[idx];
+  const aula = estado.tipo === "aula";
+  $("lista-k").textContent = aula ? "Colocações do bloco" : "Checklist da etapa";
+  $("etapa-nome").textContent = etapa ? etapa.nome : "";
+  const item = (i, de = "") =>
+    `<li class="${i.ok ? "ok" : ""}"><span>${esc(i.texto)}${de ? `<small>${esc(de)}</small>` : ""}</span>${
+      i.ok ? `<span class="feito">falou</span>` : `<button data-texto="${esc(i.texto)}" title="Manda: Você não falou isto">⚠ Avisar</button>`
+    }</li>`;
+  $("itens").innerHTML = etapa && etapa.itens.length ? etapa.itens.map((i) => item(i)).join("") : `<li class="vazio">Sem itens nesta etapa.</li>`;
+  const atras = estado.etapas.slice(0, idx).flatMap((e) => e.itens.filter((i) => !i.ok).map((i) => item(i, e.nome)));
+  $("atras-box").hidden = !atras.length;
+  $("atras").innerHTML = atras.join("");
+  $("roteiro").innerHTML = estado.etapas
+    .map((e, i) => `<li class="${i === idx ? "now" : i < idx ? "done" : ""}">${esc(e.nome)}${e.minutos ? ` <span class="muted">· ${e.minutos} min</span>` : ""}</li>`)
+    .join("");
+  renderRitmo();
+}
+
+let rapidosDe = "";
+function renderRapidos() {
+  const tipo = estado && estado.tipo === "aula" ? "aula" : estado ? "venda" : "aula";
+  if (tipo === rapidosDe) return;
+  rapidosDe = tipo;
+  $("rapidos").innerHTML = RAPIDOS[tipo].map((t) => `<button type="button" data-texto="${esc(t)}">${esc(t)}</button>`).join("");
+}
+
+// O relógio anda sozinho a partir do último estado recebido.
+function renderRitmo() {
+  if (!estado || !estado.tempo || !estado.emCall) {
+    $("ritmo").hidden = true;
+    return;
+  }
+  const t = estado.tempo;
+  const extra = Date.now() - estadoEm;
+  const idx = estado.etapas.findIndex((e) => e.id === estado.etapa);
+  $("ritmo").hidden = false;
+  $("r-idx").textContent = `${idx + 1}/${estado.etapas.length}`;
+  $("r-nome").textContent = estado.etapas[idx] ? estado.etapas[idx].nome : "";
+  if (!t.duracaoMs) {
+    $("r-tempo").textContent = fmt(t.callMs + extra);
+    $("r-plano").textContent = "tempo de call";
+    $("r-atraso").textContent = "";
+    $("r-barra").style.width = "0";
+    $("r-total").textContent = "";
+    return;
+  }
+  const noBloco = t.noBlocoMs + extra;
+  const atraso = t.atrasoMs + Math.max(0, Math.min(extra, noBloco - t.duracaoMs));
+  $("r-tempo").textContent = fmt(noBloco);
+  $("r-plano").textContent = `${Math.round(t.duracaoMs / 60000)} min`;
+  const el = $("r-atraso");
+  if (atraso > 60000) Object.assign(el, { textContent: `${fmt(atraso)} atrasado`, className: "atraso late" });
+  else if (atraso < -60000) Object.assign(el, { textContent: `${fmt(-atraso)} adiantado`, className: "atraso" });
+  else Object.assign(el, { textContent: "no tempo", className: "atraso" });
+  $("r-barra").style.width = `${Math.min(100, (noBloco / t.duracaoMs) * 100)}%`;
+  $("ritmo").classList.toggle("over", noBloco > t.duracaoMs);
+  $("r-total").textContent = `${estado.tipo === "aula" ? "Aula" : "Call"} ${fmt(t.callMs + extra)}${t.totalMs ? ` de ${fmt(t.totalMs)} planejados` : ""}`;
+}
+
+function renderEnviados() {
+  const rotulo = { enviando: "enviando…", entregue: "chegou", visto: "visto ✓", falhou: "não chegou" };
+  $("enviados").innerHTML = enviados
+    .map((a) => `<li><span>${esc(a.texto)}</span><span class="${a.situacao}">${rotulo[a.situacao]}</span></li>`)
+    .join("");
+}
+
+telaEntrar();
+</script>
+</body>
+</html>
