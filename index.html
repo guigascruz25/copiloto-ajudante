@@ -37,7 +37,7 @@ input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
 .ghost, #btn-voltar { padding: 8px 12px; border-radius: 10px; border: 1px solid var(--line); background: none; }
 .erro { margin: 0; color: #ffc2c8; font-size: 13px; }
 
-.sala { max-width: 720px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+.sala { max-width: 1180px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
 .topo { display: flex; align-items: center; gap: 12px; justify-content: space-between; }
 .k { font-size: 12px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
@@ -81,12 +81,49 @@ details.card summary { cursor: pointer; }
 .roteiro { margin: 8px 0 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; font-size: 14px; }
 .roteiro .now { color: var(--accent); font-weight: 600; }
 .roteiro .done { color: var(--muted); }
+
+/* Duas colunas no computador: conversa à esquerda, roteiro à direita. */
+.colunas { display: grid; grid-template-columns: 1fr; gap: 12px; }
+.col { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+@media (min-width: 900px) { .colunas { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); align-items: start; } }
+.topo p { margin: 2px 0 0; }
+
+.warn { padding: 9px 12px; border-radius: 10px; border: 0; background: var(--warn); color: #1a1500; font-weight: 600; }
+.conversa .dica { text-transform: none; letter-spacing: 0; font-size: 12px; }
+.feed { list-style: none; margin: 8px 0 10px; padding: 0 2px 0 0; display: flex; flex-direction: column; gap: 8px;
+  max-height: min(52vh, 520px); min-height: 120px; overflow-y: auto; }
+.msg { padding: 8px 10px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); border: 1px solid transparent; }
+.msg.meu { background: rgba(91, 140, 255, 0.1); }
+.msg.aviso { border-color: rgba(255, 213, 79, 0.45); background: rgba(255, 213, 79, 0.08); }
+.msg.sistema { background: none; padding: 0 4px; color: var(--muted); font-size: 12.5px; text-align: center; }
+.msg-k { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; font-size: 12.5px; }
+.msg-k time { color: var(--muted); }
+.msg-k .para { color: #ffe08a; }
+.msg-k .st { margin-left: auto; }
+.st { color: var(--muted); font-size: 12.5px; }
+.st.visto { color: var(--ok); font-size: 12px; }
+.st.falhou { color: var(--danger); }
+.msg p { margin: 3px 0 0; white-space: pre-wrap; word-break: break-word; }
+.msg a, .msg a:visited { color: #9cc0ff; }
+.copiar-link { margin: 0 2px 0 6px; padding: 0 6px; border-radius: 6px; border: 1px solid var(--line); background: rgba(255, 255, 255, 0.06); font-size: 11.5px; vertical-align: 1px; }
+.encaminhar { margin-top: 6px; padding: 4px 9px; border-radius: 8px; border: 1px solid rgba(255, 213, 79, 0.45); background: none; color: #ffe08a; font-size: 12.5px; }
+.encaminhar:hover { background: rgba(255, 213, 79, 0.12); }
+
+.composer { display: flex; flex-direction: column; gap: 8px; }
+.composer textarea { width: 100%; resize: vertical; min-height: 54px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line);
+  background: rgba(0, 0, 0, 0.2); color: var(--text); font: inherit; }
+.composer textarea:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.composer-acoes { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.composer-acoes .espaco { flex: 1; }
+.rapidos-k { margin-top: 14px; }
+
+@media (max-width: 520px) { .composer-acoes .warn { width: 100%; } }
 </style>
 </head>
 <body>
   <main id="entrar" class="entrar">
     <h1>Ajudante do Copiloto</h1>
-    <p class="muted">Acompanhe a apresentação e mande avisos que aparecem na tela de quem está falando. Só essa pessoa vê.</p>
+    <p class="muted">Acompanhe a apresentação junto com a equipe. Converse com quem também está acompanhando e mande para a tela de quem fala só o que importa.</p>
     <form id="form-entrar">
       <label>Seu nome <input id="in-nome" maxlength="40" autocomplete="name" required placeholder="Ex.: Ana" /></label>
       <label>Código da sala <input id="in-codigo" maxlength="6" autocomplete="off" required placeholder="Ex.: K7M2QX" /></label>
@@ -100,42 +137,55 @@ details.card summary { cursor: pointer; }
       <div>
         <div class="k">Acompanhando <span id="st-dot" class="dot"></span><span id="st-txt" class="muted"></span></div>
         <h1 id="quem">—</h1>
+        <p id="equipe" class="muted small"></p>
       </div>
       <button id="btn-sair" class="ghost" title="Sair da sala">Sair</button>
     </header>
 
     <p id="aguardando" class="faixa" hidden></p>
 
-    <section id="ritmo" class="card ritmo" hidden>
-      <div class="k">Bloco <span id="r-idx"></span> · <b id="r-nome"></b></div>
-      <div class="ritmo-row"><b id="r-tempo">00:00</b><span class="muted">de <span id="r-plano"></span></span><span id="r-atraso" class="atraso"></span></div>
-      <div class="barra"><i id="r-barra"></i></div>
-      <p id="r-total" class="muted small"></p>
-    </section>
+    <div class="colunas">
+      <div class="col">
+        <section id="ritmo" class="card ritmo" hidden>
+          <div class="k">Bloco <span id="r-idx"></span> · <b id="r-nome"></b></div>
+          <div class="ritmo-row"><b id="r-tempo">00:00</b><span class="muted">de <span id="r-plano"></span></span><span id="r-atraso" class="atraso"></span></div>
+          <div class="barra"><i id="r-barra"></i></div>
+          <p id="r-total" class="muted small"></p>
+        </section>
 
-    <section class="card enviar">
-      <div class="k">Mandar aviso</div>
-      <div id="rapidos" class="rapidos"></div>
-      <form id="form-aviso" class="linha">
-        <input id="in-aviso" maxlength="300" autocomplete="off" placeholder="Escreva o aviso e aperte Enter" />
-        <button class="primary">Enviar</button>
-      </form>
-      <ul id="enviados" class="enviados"></ul>
-    </section>
-
-    <section class="card">
-      <div class="k"><span id="lista-k">Falta falar</span> · <span id="etapa-nome"></span></div>
-      <ul id="itens" class="itens"></ul>
-      <div id="atras-box" hidden>
-        <div class="k atras-k">Ficou para trás</div>
-        <ul id="atras" class="itens"></ul>
+        <section id="conversa" class="card conversa">
+          <div class="k">Conversa da equipe <span class="muted dica">quem apresenta só vê o que você mandar com 📣</span></div>
+          <ul id="feed" class="feed"></ul>
+          <form id="form-msg" class="composer">
+            <textarea id="in-msg" rows="2" maxlength="1000" placeholder="Mensagem ou link. Enter comenta com a equipe; Ctrl+Enter manda para quem apresenta."></textarea>
+            <div class="composer-acoes">
+              <span class="espaco"></span>
+              <button type="submit" id="btn-equipe" class="ghost" title="Só a equipe vê (Enter)">💬 Equipe</button>
+              <button type="button" id="btn-apresentador" class="warn" title="Aparece na tela de quem apresenta (Ctrl+Enter)">📣 Enviar para quem apresenta</button>
+            </div>
+          </form>
+          <p id="msg-erro" class="erro" hidden></p>
+          <div class="k rapidos-k">Avisos rápidos para quem apresenta</div>
+          <div id="rapidos" class="rapidos"></div>
+        </section>
       </div>
-    </section>
 
-    <details class="card">
-      <summary class="k">Roteiro completo</summary>
-      <ol id="roteiro" class="roteiro"></ol>
-    </details>
+      <div class="col">
+        <section class="card">
+          <div class="k"><span id="lista-k">Falta falar</span> · <span id="etapa-nome"></span></div>
+          <ul id="itens" class="itens"></ul>
+          <div id="atras-box" hidden>
+            <div class="k atras-k">Ficou para trás</div>
+            <ul id="atras" class="itens"></ul>
+          </div>
+        </section>
+
+        <details class="card">
+          <summary class="k">Roteiro completo</summary>
+          <ol id="roteiro" class="roteiro"></ol>
+        </details>
+      </div>
+    </div>
   </main>
 
   <main id="fim" class="entrar" hidden>
@@ -153,14 +203,19 @@ details.card summary { cursor: pointer; }
 // Mensagens:
 //   apresentador → ajudantes: "estado" (roteiro, bloco, checklist, tempo),
 //                             "recebido" e "visto" {id} de cada aviso, "fim".
-//   ajudante → apresentador:  "oi" {id, nome} (ao entrar e a cada 20 s),
-//                             "aviso" {id, nome, texto}, "tchau" {id}.
+//   ajudante → apresentador:  "aviso" {id, autor, nome, texto}.
+//   entre ajudantes:          "chat" {id, autor, nome, texto} (quem
+//                             apresenta ignora), "historico?" {id} de quem
+//                             acabou de entrar e "historico" {para, itens}.
+//   todos os ajudantes:       "oi" {id, nome} (ao entrar e a cada 20 s),
+//                             "tchau" {id}.
 
 const SALA = {
-  // Projeto vendus-aula. A chave publishable é pública por definição (feita
-  // para ficar no navegador); ela só dá acesso aos canais abertos.
-  url: "wss://sjqwavsmhhcwrwucikac.supabase.co/realtime/v1/websocket",
-  chave: "sb_publishable_JBFstoCe2KL07W_Q7ZvOTw_8v1FWvnV",
+  // Projeto Flowinar (só o canal ao vivo; nada no banco). A chave publishable
+  // é pública por definição (feita para ficar no navegador); ela só dá acesso
+  // aos canais abertos.
+  url: "wss://rtiuerncqbnucgqdzmbe.supabase.co/realtime/v1/websocket",
+  chave: "sb_publishable_XJHM4yZ-LdSvmYb2Q-liWQ_PfMKiUVv",
   // Endereço da página do ajudante publicada (npm run publish:ajudante). O
   // convite leva o código no fim do link. Vazio: o convite manda abrir o
   // arquivo ajudante.html e digitar o código.
@@ -265,8 +320,27 @@ function conectarSala({ codigo, onEvento, onStatus = () => {} }) {
   };
 }
 
+// ---------- texto com links ----------
+
+const escHtml = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+
+// Escapa o texto e transforma http(s)://… e www.… em links (com botão de copiar).
+function textoComLinks(texto) {
+  const partes = String(texto ?? "").split(/((?:https?:\/\/|www\.)[^\s<>"']+)/gi);
+  return partes
+    .map((p, i) => {
+      if (i % 2 === 0) return escHtml(p);
+      const limpo = p.replace(/[.,;:!?)\]]+$/, "");
+      const resto = p.slice(limpo.length);
+      const href = /^https?:/i.test(limpo) ? limpo : `https://${limpo}`;
+      return `<a href="${escHtml(href)}" target="_blank" rel="noopener noreferrer">${escHtml(limpo)}</a><button type="button" class="copiar-link" data-copiar="${escHtml(href)}" title="Copiar o link">copiar</button>${escHtml(resto)}`;
+    })
+    .join("");
+}
+
 // Página de quem acompanha a apresentação: entra na sala com o código, vê o
-// roteiro e o andamento e manda avisos que aparecem no painel de quem fala.
+// roteiro e o andamento, conversa com o resto da equipe e manda para o painel
+// de quem fala só o que escolher (📣). Links viram clicáveis, com botão de copiar.
 // Vira um arquivo único em dist/ajudante.html (scripts/build-ajudante.js).
 
 const $ = (id) => document.getElementById(id);
@@ -289,9 +363,12 @@ const RAPIDOS = {
   venda: ["Pergunta mais e escuta", "Pede o próximo passo", "Não fala o preço ainda", "Isola a objeção", "Seu áudio está ruim"],
 };
 const OI_MS = 20000;
+const SUMIU_MS = 50000;
 const SEM_ESTADO_MS = 40000;
 const REENVIO_MS = 4000;
 const TENTATIVAS = 4;
+const FEED_MAX = 150;
+const HISTORICO_MAX = 60;
 
 const meuId = Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 let nome = "";
@@ -301,7 +378,13 @@ let estadoEm = 0; // quando o último estado chegou (relógio local)
 let status = "";
 let oi = null;
 let relogio = null;
-const enviados = []; // { id, texto, situacao: enviando | entregue | visto | falhou, tentativas, timer }
+const equipe = new Map(); // id → { nome, visto } (os outros ajudantes)
+// Conversa: { id, tipo: chat | aviso, autor, nome, texto, em,
+// situacao (aviso: enviando | entregue | visto | falhou), encaminhado, meu }
+const feed = [];
+const porId = new Map();
+const timers = new Map(); // id do aviso → reenvio
+let historicoPedido = null; // quem pediu histórico e se alguém já respondeu
 
 // ---------- entrar ----------
 
@@ -329,22 +412,34 @@ $("form-entrar").onsubmit = (e) => {
 function entrar(n, c) {
   nome = n;
   estado = null;
-  enviados.length = 0;
+  feed.length = 0;
+  porId.clear();
+  equipe.clear();
   $("entrar").hidden = $("fim").hidden = true;
   $("sala").hidden = false;
   $("quem").textContent = `Sala ${c}`;
-  renderEnviados();
+  renderFeed();
   render();
+  let primeira = true;
   sala = conectarSala({
     codigo: c,
     onEvento: receber,
     onStatus: (s) => {
       status = s;
-      if (s === "conectado") dizerOi();
+      if (s === "conectado") {
+        dizerOi();
+        // Quem entra depois pede a conversa que já rolou.
+        if (primeira) sala.enviar("historico?", { id: meuId });
+        primeira = false;
+      }
       renderStatus();
     },
   });
-  oi = setInterval(dizerOi, OI_MS);
+  oi = setInterval(() => {
+    dizerOi();
+    for (const [id, p] of equipe) if (Date.now() - p.visto > SUMIU_MS) equipe.delete(id);
+    renderEquipe();
+  }, OI_MS);
   relogio = setInterval(() => {
     renderRitmo();
     renderStatus();
@@ -360,7 +455,8 @@ function sair(paraTela = telaEntrar) {
   sala = null;
   clearInterval(oi);
   clearInterval(relogio);
-  enviados.forEach((a) => clearTimeout(a.timer));
+  timers.forEach((t) => clearTimeout(t));
+  timers.clear();
   paraTela();
 }
 
@@ -372,17 +468,90 @@ window.addEventListener("beforeunload", () => sala && sala.enviar("tchau", { id:
 
 // ---------- mensagens ----------
 
+function limparItem(d, tipo) {
+  if (!d || !d.id) return null;
+  return {
+    id: String(d.id).slice(0, 60),
+    tipo,
+    autor: String(d.autor || "").slice(0, 40),
+    nome: String(d.nome || "Ajudante").slice(0, 60),
+    texto: String(d.texto || "").slice(0, 1000),
+    em: Number(d.em) || Date.now(),
+    situacao: tipo === "aviso" ? (["entregue", "visto"].includes(d.situacao) ? d.situacao : "enviando") : undefined,
+    encaminhado: Boolean(d.encaminhado),
+    sistema: Boolean(d.sistema),
+  };
+}
+
+function adicionar(item) {
+  if (!item || porId.has(item.id)) return false;
+  porId.set(item.id, item);
+  feed.push(item);
+  feed.sort((a, b) => a.em - b.em);
+  while (feed.length > FEED_MAX) porId.delete(feed.shift().id);
+  return true;
+}
+
+function sistema(texto) {
+  adicionar({ id: `s-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, tipo: "chat", sistema: true, texto, em: Date.now() });
+  renderFeed();
+}
+
 function receber(evento, dados) {
   if (evento === "estado") {
     estado = dados;
     estadoEm = Date.now();
     render();
+  } else if (evento === "chat" || evento === "aviso") {
+    // Mensagem de outro ajudante (para a equipe ou para quem apresenta).
+    const item = limparItem(dados, evento);
+    if (item && item.autor !== meuId && adicionar(item)) {
+      // Outro ajudante mandou para quem apresenta uma mensagem da conversa.
+      const orig = evento === "aviso" && dados.origem && porId.get(String(dados.origem));
+      if (orig) orig.encaminhado = true;
+      if (item.autor) equipe.set(item.autor, { nome: item.nome.replace(/ \(de .*\)$/, ""), visto: Date.now() });
+      renderFeed();
+      renderEquipe();
+    }
   } else if (evento === "recebido" || evento === "visto") {
-    const a = enviados.find((x) => x.id === dados.id);
-    if (!a) return;
-    clearTimeout(a.timer);
-    if (evento === "visto" || a.situacao !== "visto") a.situacao = evento === "visto" ? "visto" : "entregue";
-    renderEnviados();
+    const a = porId.get(dados.id);
+    if (!a || a.tipo !== "aviso") return;
+    clearTimeout(timers.get(a.id));
+    if (evento === "visto") a.situacao = "visto";
+    else if (a.situacao !== "visto") a.situacao = "entregue";
+    renderFeed();
+  } else if (evento === "oi" || evento === "tchau") {
+    const id = String(dados.id || "");
+    if (!id || id === meuId) return;
+    if (evento === "tchau") {
+      const p = equipe.get(id);
+      if (p) sistema(`${p.nome} saiu`);
+      equipe.delete(id);
+    } else {
+      if (!equipe.has(id)) sistema(`${String(dados.nome || "Alguém").slice(0, 40)} está acompanhando`);
+      equipe.set(id, { nome: String(dados.nome || "Ajudante").slice(0, 40), visto: Date.now() });
+    }
+    renderEquipe();
+  } else if (evento === "historico?") {
+    // Responde com a conversa, a não ser que outro ajudante responda antes.
+    const para = String(dados.id || "");
+    if (!para || para === meuId || !feed.some((i) => !i.sistema)) return;
+    historicoPedido = { para, respondido: false };
+    setTimeout(() => {
+      if (!historicoPedido || historicoPedido.para !== para || historicoPedido.respondido || !sala) return;
+      const itens = feed.filter((i) => !i.sistema).slice(-HISTORICO_MAX).map(({ meu, ...i }) => i);
+      sala.enviar("historico", { para, itens });
+    }, 300 + Math.random() * 1500);
+  } else if (evento === "historico") {
+    if (historicoPedido && historicoPedido.para === dados.para) historicoPedido.respondido = true;
+    if (dados.para !== meuId || !Array.isArray(dados.itens)) return;
+    let mudou = false;
+    for (const d of dados.itens.slice(-HISTORICO_MAX)) {
+      const item = limparItem(d, d.tipo === "aviso" ? "aviso" : "chat");
+      if (item) item.doHistorico = true;
+      mudou = adicionar(item) || mudou;
+    }
+    if (mudou) renderFeed();
   } else if (evento === "fim") {
     sair(() => {
       $("entrar").hidden = $("sala").hidden = true;
@@ -391,33 +560,77 @@ function receber(evento, dados) {
   }
 }
 
-// Manda e reenvia até quem apresenta confirmar (ele ignora repetidos).
-function avisar(texto) {
-  texto = String(texto || "").trim().slice(0, 300);
-  if (!texto || !sala) return;
-  const a = { id: `${meuId}-${Date.now().toString(36)}`, texto, situacao: "enviando", tentativas: 0, timer: null };
-  enviados.unshift(a);
-  enviados.splice(10);
-  const tentar = () => {
-    if (a.situacao !== "enviando") return;
-    if (a.tentativas++ >= TENTATIVAS) {
-      a.situacao = "falhou";
-      renderEnviados();
-      return;
-    }
-    sala.enviar("aviso", { id: a.id, autor: meuId, nome, texto });
-    a.timer = setTimeout(tentar, REENVIO_MS);
-  };
-  tentar();
-  renderEnviados();
+// Manda uma mensagem para a equipe (chat) ou para quem apresenta (aviso). O
+// aviso é reenviado até quem apresenta confirmar (ele ignora repetidos).
+function mandar(tipo, texto, { nomeExibido = nome, origem = "" } = {}) {
+  texto = String(texto || "").trim().slice(0, 1000);
+  if (!texto || !sala) return false;
+  const item = { id: `${meuId}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`, tipo, autor: meuId, nome: nomeExibido, texto, em: Date.now(), meu: true };
+  if (tipo === "aviso") item.situacao = "enviando";
+  adicionar(item);
+  const payload = { id: item.id, autor: meuId, nome: nomeExibido, texto, em: item.em, origem };
+  sala.enviar(tipo, payload);
+  if (tipo === "aviso") {
+    let tentativas = 1;
+    const tentar = () => {
+      if (item.situacao !== "enviando") return;
+      if (tentativas++ >= TENTATIVAS) {
+        item.situacao = "falhou";
+        renderFeed();
+        return;
+      }
+      sala && sala.enviar("aviso", payload);
+      timers.set(item.id, setTimeout(tentar, REENVIO_MS));
+    };
+    timers.set(item.id, setTimeout(tentar, REENVIO_MS));
+  }
+  renderFeed();
+  return true;
 }
 
-$("form-aviso").onsubmit = (e) => {
+const avisar = (texto) => mandar("aviso", texto);
+
+// Leva uma mensagem da conversa para a tela de quem apresenta.
+function encaminhar(id) {
+  const orig = porId.get(id);
+  if (!orig || orig.encaminhado) return;
+  const nomeExibido = orig.autor && orig.autor !== meuId ? `${nome} (de ${orig.nome})` : nome;
+  if (mandar("aviso", orig.texto, { nomeExibido, origem: orig.id })) {
+    orig.encaminhado = true;
+    renderFeed();
+  }
+}
+
+function erro(texto) {
+  $("msg-erro").hidden = !texto;
+  $("msg-erro").textContent = texto || "";
+  if (texto) setTimeout(() => ($("msg-erro").hidden = true), 6000);
+}
+
+function enviarDoCampo(tipo) {
+  erro("");
+  if (mandar(tipo, $("in-msg").value)) $("in-msg").value = "";
+  $("in-msg").focus();
+}
+
+$("form-msg").onsubmit = (e) => {
   e.preventDefault();
-  avisar($("in-aviso").value);
-  $("in-aviso").value = "";
-  $("in-aviso").focus();
+  enviarDoCampo("chat");
 };
+$("btn-apresentador").onclick = () => enviarDoCampo("aviso");
+$("in-msg").onkeydown = (e) => {
+  if (e.key !== "Enter" || e.shiftKey) return;
+  e.preventDefault();
+  enviarDoCampo(e.ctrlKey || e.metaKey ? "aviso" : "chat");
+};
+
+$("feed").onclick = (e) => {
+  const enc = e.target.closest("[data-encaminhar]");
+  if (enc) return encaminhar(enc.dataset.encaminhar);
+  const copiar = e.target.closest("[data-copiar]");
+  if (copiar) return navigator.clipboard.writeText(copiar.dataset.copiar).then(() => (copiar.textContent = "copiado"));
+};
+
 $("rapidos").onclick = (e) => e.target.dataset.texto && avisar(e.target.dataset.texto);
 for (const lista of ["itens", "atras"]) {
   $(lista).onclick = (e) => {
@@ -438,6 +651,7 @@ const fmt = (ms) => {
   const ss = String(s % 60).padStart(2, "0");
   return h ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 };
+const hora = (ms) => new Date(ms).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
 function renderStatus() {
   const semEstado = status === "conectado" && (!estado || Date.now() - estadoEm > SEM_ESTADO_MS);
@@ -458,9 +672,43 @@ function renderStatus() {
   } else aguardando.hidden = true;
 }
 
+function renderEquipe() {
+  const outros = [...equipe.values()].map((p) => p.nome);
+  $("equipe").textContent = `Na sala: você${outros.length ? `, ${outros.join(", ")}` : ""}${estado ? ` · apresentando: ${estado.apresentador}` : ""}`;
+}
+
+function renderFeed() {
+  const box = $("feed");
+  const noFim = box.scrollHeight - box.scrollTop - box.clientHeight < 60;
+  const rotulo = { enviando: "enviando…", entregue: "chegou na tela", visto: "visto ✓", falhou: "não chegou" };
+  box.innerHTML = feed.length
+    ? feed
+        .map((i) => {
+          if (i.sistema) return `<li class="msg sistema">${esc(i.texto)} · ${hora(i.em)}</li>`;
+          const quem = i.meu ? "Você" : esc(i.nome);
+          const para = i.tipo === "aviso" ? `<span class="para">📣 para quem apresenta</span>` : "";
+          const st = i.tipo === "aviso" ? `<span class="st ${i.situacao}">${rotulo[i.situacao] || ""}</span>` : "";
+          const acao =
+            i.tipo === "chat"
+              ? i.encaminhado
+                ? `<span class="st entregue">enviado para quem apresenta</span>`
+                : `<button type="button" class="encaminhar" data-encaminhar="${esc(i.id)}" title="Manda esta mensagem para a tela de quem apresenta">📣 Enviar para quem apresenta</button>`
+              : "";
+          return `<li class="msg ${i.tipo}${i.meu ? " meu" : ""}">
+            <div class="msg-k"><b>${quem}</b>${para}<time>${hora(i.em)}</time>${st}</div>
+            ${i.texto ? `<p>${textoComLinks(i.texto)}</p>` : ""}
+            ${acao}
+          </li>`;
+        })
+        .join("")
+    : `<li class="msg sistema">Ninguém escreveu ainda. O que você comentar aqui só a equipe vê.</li>`;
+  if (noFim) box.scrollTop = box.scrollHeight;
+}
+
 function render() {
   renderStatus();
   renderRapidos();
+  renderEquipe();
   if (!estado) {
     $("ritmo").hidden = true;
     $("itens").innerHTML = `<li class="vazio">O roteiro aparece quando quem apresenta abrir o painel.</li>`;
@@ -477,7 +725,7 @@ function render() {
   $("etapa-nome").textContent = etapa ? etapa.nome : "";
   const item = (i, de = "") =>
     `<li class="${i.ok ? "ok" : ""}"><span>${esc(i.texto)}${de ? `<small>${esc(de)}</small>` : ""}</span>${
-      i.ok ? `<span class="feito">falou</span>` : `<button data-texto="${esc(i.texto)}" title="Manda: Você não falou isto">⚠ Avisar</button>`
+      i.ok ? `<span class="feito">falou</span>` : `<button data-texto="${esc(i.texto)}" title="Manda para quem apresenta: Você não falou isto">⚠ Avisar</button>`
     }</li>`;
   $("itens").innerHTML = etapa && etapa.itens.length ? etapa.itens.map((i) => item(i)).join("") : `<li class="vazio">Sem itens nesta etapa.</li>`;
   const atras = estado.etapas.slice(0, idx).flatMap((e) => e.itens.filter((i) => !i.ok).map((i) => item(i, e.nome)));
@@ -528,13 +776,6 @@ function renderRitmo() {
   $("r-barra").style.width = `${Math.min(100, (noBloco / t.duracaoMs) * 100)}%`;
   $("ritmo").classList.toggle("over", noBloco > t.duracaoMs);
   $("r-total").textContent = `${estado.tipo === "aula" ? "Aula" : "Call"} ${fmt(t.callMs + extra)}${t.totalMs ? ` de ${fmt(t.totalMs)} planejados` : ""}`;
-}
-
-function renderEnviados() {
-  const rotulo = { enviando: "enviando…", entregue: "chegou", visto: "visto ✓", falhou: "não chegou" };
-  $("enviados").innerHTML = enviados
-    .map((a) => `<li><span>${esc(a.texto)}</span><span class="${a.situacao}">${rotulo[a.situacao]}</span></li>`)
-    .join("");
 }
 
 telaEntrar();
